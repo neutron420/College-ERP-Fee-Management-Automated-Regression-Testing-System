@@ -1,0 +1,442 @@
+# 10 - Database Schema
+
+## 1. Prisma Schema Mapping
+Below is the definitive schema specification implemented in `packages/database/prisma/schema.prisma`.
+
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// Enums
+// -------------------------------------------------------------
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  GRADUATED
+}
+
+enum ComponentType {
+  TUITION
+  EXAMINATION
+  LIBRARY
+  LABORATORY
+  DEVELOPMENT
+  HOSTEL
+  MISCELLANEOUS
+}
+
+enum ReductionType {
+  PERCENTAGE
+  FIXED
+}
+
+enum AssessmentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  UPI
+  CREDIT_CARD
+  DEBIT_CARD
+  DEMAND_DRAFT
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  PROCESSED
+  REJECTED
+}
+
+enum TestRunStatus {
+  RUNNING
+  PASSED
+  FAILED
+  ERROR
+}
+
+enum TestResultStatus {
+  PASS
+  FAIL
+  ERROR
+  SKIPPED
+}
+
+enum SuiteType {
+  FEE_CALCULATION
+  PAYMENT
+  STUDENT
+  REPORTS
+  INTEGRATION
+  FULL_REGRESSION
+}
+
+// -------------------------------------------------------------
+// Academic Models
+// -------------------------------------------------------------
+
+model Department {
+  id            String         @id @default(cuid())
+  code          String         @unique
+  name          String
+  description   String?
+  status        String         @default("ACTIVE")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  students      Student[]
+  feeStructures FeeStructure[]
+
+  @@map("departments")
+}
+
+model AcademicYear {
+  id             String          @id @default(cuid())
+  yearCode       String          @unique // e.g. 2024-25
+  startDate      DateTime
+  endDate        DateTime
+  isCurrent      Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  students       Student[]
+  feeStructures  FeeStructure[]
+  feeAssessments FeeAssessment[]
+
+  @@map("academic_years")
+}
+
+model Student {
+  id             String               @id @default(cuid())
+  rollNumber     String               @unique
+  firstName      String
+  lastName       String
+  email          String               @unique
+  phone          String?
+  status         StudentStatus        @default(ACTIVE)
+  departmentId   String
+  academicYearId String
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  department     Department           @relation(fields: [departmentId], references: [id])
+  academicYear   AcademicYear         @relation(fields: [academicYearId], references: [id])
+  scholarships   StudentScholarship[]
+  discounts      StudentDiscount[]
+  feeAssessments FeeAssessment[]
+  payments       Payment[]
+
+  @@index([departmentId])
+  @@index([academicYearId])
+  @@map("students")
+}
+
+// -------------------------------------------------------------
+// Fee Structure & Reductions
+// -------------------------------------------------------------
+
+model FeeStructure {
+  id             String          @id @default(cuid())
+  name           String
+  departmentId   String
+  academicYearId String
+  dueDate        DateTime
+  finePerDay     Decimal         @default(0.00) @db.Decimal(10, 2)
+  graceDays      Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  department     Department      @relation(fields: [departmentId], references: [id])
+  academicYear   AcademicYear    @relation(fields: [academicYearId], references: [id])
+  components     FeeComponent[]
+  feeAssessments FeeAssessment[]
+
+  @@unique([departmentId, academicYearId, name])
+  @@map("fee_structures")
+}
+
+model FeeComponent {
+  id             String        @id @default(cuid())
+  feeStructureId String
+  type           ComponentType
+  name           String
+  amount         Decimal       @db.Decimal(10, 2)
+  isOptional     Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  feeStructure   FeeStructure  @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+
+  @@index([feeStructureId])
+  @@map("fee_components")
+}
+
+model Scholarship {
+  id          String               @id @default(cuid())
+  code        String               @unique
+  name        String
+  type        ReductionType
+  value       Decimal              @db.Decimal(10, 2)
+  description String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  students    StudentScholarship[]
+
+  @@map("scholarships")
+}
+
+model Discount {
+  id          String            @id @default(cuid())
+  code        String            @unique
+  name        String
+  type        ReductionType
+  value       Decimal           @db.Decimal(10, 2)
+  description String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  students    StudentDiscount[]
+
+  @@map("discounts")
+}
+
+model StudentScholarship {
+  id            String       @id @default(cuid())
+  studentId     String
+  scholarshipId String
+  academicYearId String
+  createdAt     DateTime     @default(now())
+
+  student       Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  scholarship   Scholarship  @relation(fields: [scholarshipId], references: [id])
+
+  @@unique([studentId, scholarshipId, academicYearId])
+  @@map("student_scholarships")
+}
+
+model StudentDiscount {
+  id            String       @id @default(cuid())
+  studentId     String
+  discountId    String
+  academicYearId String
+  createdAt     DateTime     @default(now())
+
+  student       Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  discount      Discount     @relation(fields: [discountId], references: [id])
+
+  @@unique([studentId, discountId, academicYearId])
+  @@map("student_discounts")
+}
+
+// -------------------------------------------------------------
+// Financial Ledger & Transactions
+// -------------------------------------------------------------
+
+model FeeAssessment {
+  id                String           @id @default(cuid())
+  studentId         String
+  feeStructureId    String
+  academicYearId    String
+  baseAmount        Decimal          @db.Decimal(10, 2)
+  scholarshipAmount Decimal          @default(0.00) @db.Decimal(10, 2)
+  discountAmount    Decimal          @default(0.00) @db.Decimal(10, 2)
+  lateFineAmount    Decimal          @default(0.00) @db.Decimal(10, 2)
+  netPayable        Decimal          @db.Decimal(10, 2)
+  paidAmount        Decimal          @default(0.00) @db.Decimal(10, 2)
+  outstandingAmount Decimal          @db.Decimal(10, 2)
+  status            AssessmentStatus @default(UNPAID)
+  assessmentDate    DateTime         @default(now())
+  dueDate           DateTime
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  student           Student          @relation(fields: [studentId], references: [id])
+  feeStructure      FeeStructure     @relation(fields: [feeStructureId], references: [id])
+  academicYear      AcademicYear     @relation(fields: [academicYearId], references: [id])
+  payments          Payment[]
+  refunds           Refund[]
+
+  @@unique([studentId, feeStructureId])
+  @@index([academicYearId])
+  @@index([status])
+  @@map("fee_assessments")
+}
+
+model Payment {
+  id              String         @id @default(cuid())
+  feeAssessmentId String
+  studentId       String
+  transactionRef  String         @unique
+  amount          Decimal        @db.Decimal(10, 2)
+  paymentMethod   PaymentMethod
+  status          PaymentStatus  @default(SUCCESS)
+  paymentDate     DateTime       @default(now())
+  remarks         String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  feeAssessment   FeeAssessment  @relation(fields: [feeAssessmentId], references: [id])
+  student         Student        @relation(fields: [studentId], references: [id])
+  refunds         Refund[]
+
+  @@index([feeAssessmentId])
+  @@index([studentId])
+  @@index([paymentDate])
+  @@map("payments")
+}
+
+model Refund {
+  id              String         @id @default(cuid())
+  paymentId       String
+  feeAssessmentId String
+  amount          Decimal        @db.Decimal(10, 2)
+  reason          String
+  status          RefundStatus   @default(PROCESSED)
+  processedAt     DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  payment         Payment        @relation(fields: [paymentId], references: [id])
+  feeAssessment   FeeAssessment  @relation(fields: [feeAssessmentId], references: [id])
+
+  @@index([paymentId])
+  @@index([feeAssessmentId])
+  @@map("refunds")
+}
+
+// -------------------------------------------------------------
+// Regression Testing Subsystem
+// -------------------------------------------------------------
+
+model TestSuite {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  description String?
+  suiteType   SuiteType   @default(FULL_REGRESSION)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  testCases   TestCase[]
+  testRuns    TestRun[]
+
+  @@map("test_suites")
+}
+
+model TestCase {
+  id             String       @id @default(cuid())
+  suiteId        String
+  code           String       @unique
+  name           String
+  description    String?
+  targetModule   String       // FEE_ENGINE, REPORTS, PAYMENTS, etc.
+  inputPayload   Json
+  expectedOutput Json
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  suite          TestSuite    @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  testResults    TestResult[]
+
+  @@index([suiteId])
+  @@index([targetModule])
+  @@map("test_cases")
+}
+
+model TestRun {
+  id             String        @id @default(cuid())
+  suiteId        String
+  triggerSource  String        @default("MANUAL") // MANUAL, CI, SCHEDULED
+  engineVersion  String        @default("1.0")
+  totalTests     Int           @default(0)
+  passed         Int           @default(0)
+  failed         Int           @default(0)
+  skipped        Int           @default(0)
+  durationMs     Int           @default(0)
+  status         TestRunStatus @default(RUNNING)
+  defectActive   Boolean       @default(false)
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+
+  suite          TestSuite     @relation(fields: [suiteId], references: [id])
+  results        TestResult[]
+
+  @@index([suiteId])
+  @@index([startedAt])
+  @@map("test_runs")
+}
+
+model TestResult {
+  id           String           @id @default(cuid())
+  testRunId    String
+  testCaseId   String
+  status       TestResultStatus
+  expectedVal  Json
+  actualVal    Json
+  difference   Json?
+  errorMessage String?
+  durationMs   Int              @default(0)
+  executedAt   DateTime         @default(now())
+
+  testRun      TestRun          @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testCase     TestCase         @relation(fields: [testCaseId], references: [id])
+
+  @@index([testRunId])
+  @@index([testCaseId])
+  @@map("test_results")
+}
+
+model DefectSimulation {
+  id                 String    @id @default(cuid())
+  defectKey          String    @unique
+  name               String
+  description        String
+  isActive           Boolean   @default(false)
+  affectedComponent  String
+  activatedAt        DateTime?
+  deactivatedAt      DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("defect_simulations")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String   // CREATE, UPDATE, DELETE, PAYMENT_CAPTURED, REFUND_ISSUED, DEFECT_TOGGLED
+  performedBy String  @default("SYSTEM")
+  oldState   Json?
+  newState   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+```
