@@ -129,7 +129,7 @@ college-erp-regression/
 - Run-to-run comparison highlights regressions in red with exact numerical and structural diffs.
 
 ## Current Phase
-- **Phase 2**: Database Layer (Prisma schema, migrations, seed data, DB verification).
+- **Phase 3**: Backend Foundation (Bun, Express, Middleware, Validation, Error Handling, Structured Logging).
 
 ## Completed
 - Phase 0: Project understanding and environment verification.
@@ -138,12 +138,16 @@ college-erp-regression/
   - Monorepo package directories created (`apps/api`, `packages/database`, `packages/fee-engine`, `packages/testing`, `packages/shared`, `packages/types`, `docker`, `scripts`, `.github/workflows`).
   - `.env.example` and `docker/docker-compose.yml` created.
   - Root `memory.md` initialized.
+- Phase 2: Database Layer Completed:
+  - Prisma schema with normalized models and enums pushed to live Neon PostgreSQL database.
+  - Prisma client generated.
+  - Database seeded with 5 departments, 1 academic year, 60 students, 5 fee structures, 20 fee components, 60 assessments, 45 payments, and regression test suites.
+  - Database verification confirmed live records in Neon.
 
 ## In Progress
-- Phase 2: Database Layer Implementation.
+- Phase 3: Backend Foundation (Bun + Express API setup, validation middleware, typed errors, structured logger).
 
 ## Pending
-- Phase 3: Backend Foundation (Bun, Express, Middleware, Errors, Logging).
 - Phase 4: Core Domain Modules (Departments, Academic Years, Students, Fees, Payments, Refunds).
 - Phase 5: Fee Calculation Engine & Unit Tests.
 - Phase 6: Reporting Modules (Student, Department, Monthly, Outstanding).
