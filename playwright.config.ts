@@ -8,9 +8,11 @@ export default defineConfig({
   reporter: 'list',
   use: {
     baseURL: 'http://localhost:4000',
-    headless: true,
     extraHTTPHeaders: {
       'Content-Type': 'application/json',
+    },
+    launchOptions: {
+      slowMo: 800, // 800ms delay between actions so all animations and clicks are clearly visible
     },
   },
 });

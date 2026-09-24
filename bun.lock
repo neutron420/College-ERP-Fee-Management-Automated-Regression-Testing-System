@@ -6,6 +6,7 @@
       "name": "fee-testing",
       "devDependencies": {
         "@playwright/test": "^1.63.0",
+        "@types/node": "^22.13.4",
         "prettier": "3.9.6",
         "turbo": "^2.11.2",
         "typescript": "7.0.2",
