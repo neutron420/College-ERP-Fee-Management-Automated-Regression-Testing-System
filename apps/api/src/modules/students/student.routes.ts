@@ -13,6 +13,7 @@ const controller = new StudentController();
 
 router.get('/', validate({ query: studentQuerySchema }), controller.list);
 router.get('/:id', validate({ params: studentIdParamSchema }), controller.getById);
+router.get('/:id/ledger', validate({ params: studentIdParamSchema }), controller.getLedger);
 router.post('/', validate({ body: createStudentSchema }), controller.create);
 router.patch(
   '/:id',

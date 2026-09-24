@@ -11,9 +11,12 @@
     "db:push": "bun --filter @repo/database db:push",
     "db:migrate": "bun --filter @repo/database db:migrate",
     "db:seed": "bun --filter @repo/database db:seed",
-    "db:studio": "bun --filter @repo/database db:studio"
+    "db:studio": "bun --filter @repo/database db:studio",
+    "test:e2e": "playwright test",
+    "test:endpoints": "bun run scripts/verify-all-endpoints.ts"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "prettier": "3.9.6",
     "turbo": "^2.11.2",
     "typescript": "7.0.2"

@@ -129,7 +129,7 @@ college-erp-regression/
 - Run-to-run comparison highlights regressions in red with exact numerical and structural diffs.
 
 ## Current Phase
-- **Phase 3**: Backend Foundation (Bun, Express, Middleware, Validation, Error Handling, Structured Logging).
+- **Phase 10 / 12**: Automated E2E Testing & Frontend Dashboard Development.
 
 ## Completed
 - Phase 0: Project understanding and environment verification.
@@ -143,20 +143,39 @@ college-erp-regression/
   - Prisma client generated.
   - Database seeded with 5 departments, 1 academic year, 60 students, 5 fee structures, 20 fee components, 60 assessments, 45 payments, and regression test suites.
   - Database verification confirmed live records in Neon.
+- Phase 3: Backend Foundation Completed:
+  - Bun + Express modular REST API (`apps/api`) running on port 4000.
+  - Zod validation middleware for body, query, and params.
+  - Centralized error handling (`AppError`, `ValidationError`, `NotFoundError`, `ConflictError`, `BusinessRuleViolationError`).
+  - Structured request logging with UUID correlation IDs.
+- Phase 4: Core Domain Modules Completed:
+  - `departments`: Listing, ID lookup, creation, update with student count relations.
+  - `academic-years`: Term management, current year toggle.
+  - `students`: Pagination, search, filters by department/academic year, student ledger profiles.
+  - `fees`: Fee structures, components, calculation previews, student fee assessment creation.
+  - `payments`: Recording payments with atomic status and balance updates on assessments.
+  - `refunds`: Non-destructive refund processing and audit trail.
+- Phase 5: Pure Fee Calculation Engine Completed:
+  - Isolated `@repo/fee-engine` package with zero HTTP/UI dependencies.
+  - Deterministic calculations for base fees, scholarships, discounts, late fines, net payable, and balances.
+  - 14 Vitest unit tests passing in 100ms with 100% coverage of boundary cases.
+- Phase 6: Reporting Subsystem Completed:
+  - Student Fee Report, Department Fee Report, Monthly Collection Report, and Outstanding Balances Report implemented.
+  - All reports derive figures strictly through `@repo/fee-engine`.
+- Phase 7, 8 & 9: Automated Regression Testing & Defect Simulation Completed:
+  - Test suites, runner, execution persistence (`TestRun`, `TestResult`), and side-by-side run comparison API.
+  - Defect simulation toggle (`DOUBLE_LIBRARY_FEE`) demonstrates the complete case study:
+    - v1.0 Clean: All regression tests PASS.
+    - v1.1 Defect Injected: Tests FAIL with exact numerical differences (+₹2,000) flagged.
+    - v1.2 Fixed: Tests PASS again.
 
 ## In Progress
-- Phase 3: Backend Foundation (Bun + Express API setup, validation middleware, typed errors, structured logger).
+- Phase 12: Next.js Frontend Dashboard (connecting to the fully validated backend).
 
 ## Pending
-- Phase 4: Core Domain Modules (Departments, Academic Years, Students, Fees, Payments, Refunds).
-- Phase 5: Fee Calculation Engine & Unit Tests.
-- Phase 6: Reporting Modules (Student, Department, Monthly, Outstanding).
-- Phase 7: Testing Infrastructure.
-- Phase 8: Automated Regression Testing Engine.
-- Phase 9: Controlled Defect Simulation.
 - Phase 10: Playwright E2E Tests.
 - Phase 11: CI/CD Pipeline.
-- Phase 12: Next.js Frontend Dashboard.
+- Phase 12: Next.js Web Frontend.
 - Phase 13: Final Validation & Demonstration.
 
 ## Important Decisions

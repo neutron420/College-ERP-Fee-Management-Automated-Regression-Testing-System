@@ -46,4 +46,27 @@ export class StudentController {
       next(err);
     }
   }
+
+  async getLedger(req: Request, res: Response, next: NextFunction) {
+    try {
+      const student = await service.getStudentById(req.params.id as string);
+      res.json(
+        successResponse({
+          student: {
+            id: student.id,
+            rollNumber: student.rollNumber,
+            name: `${student.firstName} ${student.lastName}`,
+            email: student.email,
+            department: student.department.name,
+          },
+          assessments: student.feeAssessments,
+          payments: student.payments,
+          scholarships: student.scholarships,
+          discounts: student.discounts,
+        })
+      );
+    } catch (err) {
+      next(err);
+    }
+  }
 }

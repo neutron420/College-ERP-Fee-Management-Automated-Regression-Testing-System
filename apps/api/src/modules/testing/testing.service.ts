@@ -64,10 +64,22 @@ export class TestingService {
    * Automated Regression Suite Runner
    */
   async executeSuite(suiteCode = 'FULL_REGRESSION', triggerSource = 'MANUAL') {
-    const suite = await prisma.testSuite.findUnique({
-      where: { code: suiteCode },
-      include: { testCases: { where: { isActive: true } } },
-    });
+    let suite = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        suite = await prisma.testSuite.findUnique({
+          where: { code: suiteCode },
+          include: { testCases: { where: { isActive: true } } },
+        });
+        break;
+      } catch (err: any) {
+        if (err.code === 'P1017' && attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+        throw err;
+      }
+    }
 
     if (!suite) throw new NotFoundError('TestSuite', suiteCode);
 
