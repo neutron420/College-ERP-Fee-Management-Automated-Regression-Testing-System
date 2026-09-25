@@ -381,6 +381,16 @@ export default function NeoBrutalistDashboard() {
             {isRunningTests ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
             {isRunningTests ? 'TESTING...' : 'RUN REGRESSION SUITE'}
           </button>
+
+          <a
+            href="/pipeline"
+            data-testid="pipeline-link"
+            className="brutal-btn text-xs"
+            style={{ background: '#818cf8', color: '#fff', borderColor: '#000', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <Activity className="w-4 h-4" />
+            VIEW PIPELINE
+          </a>
         </div>
       </header>
 
@@ -416,19 +426,54 @@ export default function NeoBrutalistDashboard() {
         {/* ============================================================== */}
         {activeTab === 'overview' && (
           <div className="space-y-8">
-            {/* Top Alert Banner for Active Defect */}
+            {/* Top Alert Banner for Active Defect with Visual Cascading Blast Radius */}
             {isDefectActive && (
-              <div className="border-[3px] border-black bg-[#FF4757] text-white p-5 shadow-[6px_6px_0px_#000] animate-brutal-pulse flex items-start gap-4">
-                <AlertTriangle className="w-8 h-8 shrink-0 text-[#FFE600]" />
-                <div>
-                  <h3 className="font-extrabold text-lg uppercase tracking-wide">
-                    WARNING: CONTROLLED DEFECT INJECTED (v1.1)
-                  </h3>
-                  <p className="font-mono text-sm mt-1 text-zinc-100">
-                    The calculation engine is currently duplicate-counting the ₹2,000 Library Fee component.
-                    All dependent Student and Department Reports are producing inflated totals.
-                    Run the <b>Automated Regression Suite</b> to verify detection.
-                  </p>
+              <div className="border-[3px] border-black bg-[#FF4757] text-white p-6 shadow-[6px_6px_0px_#000] space-y-4">
+                <div className="flex items-start gap-4">
+                  <AlertTriangle className="w-8 h-8 shrink-0 text-[#FFE600] animate-bounce" />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center flex-wrap gap-2">
+                      <h3 className="font-extrabold text-xl uppercase tracking-wide">
+                        WARNING: CONTROLLED DEFECT INJECTED (v1.1)
+                      </h3>
+                      <span className="brutal-badge brutal-badge-yellow">DOUBLE_LIBRARY_FEE (ACTIVE)</span>
+                    </div>
+                    <p className="font-mono text-xs md:text-sm mt-1 text-zinc-100">
+                      The calculation engine is duplicate-counting the ₹2,000 Library Fee. This micro-defect cascades across all 60 students and 5 academic departments.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Visual Blast Radius Matrix */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono text-xs text-black">
+                  <div className="border-2 border-black bg-white p-3 shadow-[3px_3px_0px_#000]">
+                    <span className="text-zinc-500 font-bold block text-[10px]">ROOT CODE LOCATION</span>
+                    <span className="font-black text-sm text-black">@repo/fee-engine</span>
+                  </div>
+                  <div className="border-2 border-black bg-white p-3 shadow-[3px_3px_0px_#000]">
+                    <span className="text-zinc-500 font-bold block text-[10px]">AFFECTED POPULATION</span>
+                    <span className="font-black text-sm text-black">60 Students (100%)</span>
+                  </div>
+                  <div className="border-2 border-black bg-[#FFE600] p-3 shadow-[3px_3px_0px_#000]">
+                    <span className="text-black font-bold block text-[10px]">PER-STUDENT ERROR</span>
+                    <span className="font-black text-sm text-red-600">+₹2,000 Overcharge</span>
+                  </div>
+                  <div className="border-2 border-black bg-[#FFE600] p-3 shadow-[3px_3px_0px_#000]">
+                    <span className="text-black font-bold block text-[10px]">INSTITUTIONAL VARIANCE</span>
+                    <span className="font-black text-sm text-red-600">+₹1,20,000 Total Corrupted</span>
+                  </div>
+                </div>
+
+                {/* Visual Cascade Flow */}
+                <div className="border-2 border-black bg-black text-[#FFE600] p-3 font-mono text-xs flex flex-wrap items-center justify-between gap-2">
+                  <span>💥 <b>CASCADING BLAST RADIUS:</b></span>
+                  <span>Pure Fee Engine (+₹2K)</span>
+                  <span>➔</span>
+                  <span>Student Ledgers (₹52,000)</span>
+                  <span>➔</span>
+                  <span>5 Dept Reports (+₹24K/dept)</span>
+                  <span>➔</span>
+                  <span>Institutional Receivables (₹31.2 Lakhs)</span>
                 </div>
               </div>
             )}

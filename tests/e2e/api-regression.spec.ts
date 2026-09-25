@@ -7,6 +7,13 @@ test.describe('College ERP Fee Management & Regression Platform E2E Suite', () =
   let defectiveRunId: string;
   let resolvedRunId: string;
 
+  // Guarantee clean defect state before the entire suite starts
+  test.beforeAll(async ({ request }) => {
+    await request.post('/api/testing/defects/toggle', {
+      data: { defectKey: 'DOUBLE_LIBRARY_FEE', isActive: false },
+    });
+  });
+
   test('01: System Health & Base Configuration', async ({ request }) => {
     const res = await request.get('/health');
     expect(res.status()).toBe(200);
@@ -86,6 +93,16 @@ test.describe('College ERP Fee Management & Regression Platform E2E Suite', () =
   });
 
   test('05: Reporting Subsystem Derivations', async ({ request }) => {
+    // Self-heal: ensure IDs are available even if test 03 was skipped
+    if (!sampleStudentId || !sampleDepartmentId) {
+      const stuRes = await request.get('/api/students?limit=1');
+      const stuData = await stuRes.json();
+      sampleStudentId = stuData.data[0].id;
+      const deptRes = await request.get('/api/departments');
+      const deptData = await deptRes.json();
+      sampleDepartmentId = deptData.data[0].id;
+    }
+
     // 1. Student Report
     const sReportRes = await request.get(`/api/reports/student/${sampleStudentId}`);
     expect(sReportRes.status()).toBe(200);
