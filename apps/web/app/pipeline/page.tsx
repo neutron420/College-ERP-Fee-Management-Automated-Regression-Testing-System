@@ -64,6 +64,10 @@ import {
   Sliders,
   ExternalLink,
   Award,
+  FlaskRound,
+  FlaskRound as TestTube,
+  Layers,
+  Settings2,
 } from 'lucide-react';
 
 const API = 'http://localhost:4000';
@@ -131,6 +135,68 @@ export const DEFECT_SCENARIOS: Record<string, DefectScenario> = {
     glitchedAmount: 50000,
     failedTestCode: 'TC-MANAGEMENT-PREMIUM',
   },
+};
+
+// ─── Test Suite Switcher (Option 2) ───────────────────────────────
+export interface TestSuiteConfig {
+  id: string;
+  name: string;
+  code: string;
+  shortLabel: string;
+  testCount: number;
+  description: string;
+  tests: string[];
+}
+
+export const TEST_SUITES: Record<string, TestSuiteConfig> = {
+  FULL_REGRESSION: {
+    id: 'FULL_REGRESSION',
+    name: 'Full Regression Suite',
+    code: 'FULL_REGRESSION',
+    shortLabel: 'Full Suite (10 Tests)',
+    testCount: 10,
+    description: 'Comprehensive test suite verifying all tuition, fee heads, quotas, waivers, and ledger entries.',
+    tests: ['TC-MERIT-TUITION', 'TC-LIB-FEE', 'TC-SCHOLARSHIP-DEDUCT', 'TC-MANAGEMENT-PREMIUM', 'TC-PAYMENT-LEDGER', 'TC-RECEIPT-HASH', 'TC-REFUND-CALC', 'TC-COHORT-AGGREGATE', 'TC-DEPARTMENT-DIST', 'TC-AUDIT-COMPLIANCE'],
+  },
+  SMOKE_SUITE: {
+    id: 'SMOKE_SUITE',
+    name: 'Critical Smoke Sanity Suite',
+    code: 'SMOKE_SUITE',
+    shortLabel: 'Smoke Sanity (3 Tests)',
+    testCount: 3,
+    description: 'Ultra-fast sanity checks for critical fee calculation and payment integrity.',
+    tests: ['TC-MERIT-TUITION', 'TC-LIB-FEE', 'TC-PAYMENT-LEDGER'],
+  },
+  FINANCIAL_LEDGER_SUITE: {
+    id: 'FINANCIAL_LEDGER_SUITE',
+    name: 'Financial Ledger & Audit Suite',
+    code: 'FINANCIAL_LEDGER_SUITE',
+    shortLabel: 'Ledger Audit (5 Tests)',
+    testCount: 5,
+    description: 'Specialized accounting assertions verifying double-entry balances and zero discrepancy.',
+    tests: ['TC-PAYMENT-LEDGER', 'TC-RECEIPT-HASH', 'TC-REFUND-CALC', 'TC-COHORT-AGGREGATE', 'TC-AUDIT-COMPLIANCE'],
+  },
+};
+
+// ─── Custom Student Configuration (Option 3) ───────────────────────
+export interface StudentModel {
+  name: string;
+  rollNumber: string;
+  department: string;
+  quota: string;
+  tuitionFee: number;
+  libraryFee: number;
+  scholarshipPercent: number;
+}
+
+const DEFAULT_STUDENT: StudentModel = {
+  name: 'Rahul Sharma',
+  rollNumber: 'CS-2024-042',
+  department: 'Computer Science & Engineering (CSE)',
+  quota: 'MERIT',
+  tuitionFee: 45000,
+  libraryFee: 2000,
+  scholarshipPercent: 0,
 };
 
 // ─── Rete.js Node Socket ──────────────────────────────────────────
@@ -570,9 +636,11 @@ function buildInitialNodes(
     onRunV3: () => void;
     onInspectNode: (nodeData: any) => void;
   },
-  scenario: DefectScenario
+  scenario: DefectScenario,
+  suite: TestSuiteConfig,
+  student: StudentModel
 ): Node[] {
-  const baseNet = 47000;
+  const baseNet = student.tuitionFee + student.libraryFee - (student.tuitionFee * student.scholarshipPercent) / 100;
   const glitchedNet = baseNet + scenario.overchargePerStudent;
 
   return [
@@ -588,8 +656,8 @@ function buildInitialNodes(
         height: 480,
         versionTag: 'STAGE 1 // v1.0',
         title: 'BASELINE PRODUCTION LIFECYCLE',
-        subtitle: 'Student Admissions -> Fee Engine -> Razorpay Collection -> 10/10 Regression Audit',
-        stageMeta: 'ENVIRONMENT: PROD-CLEAN',
+        subtitle: `Student Admissions (${student.name}) -> Fee Engine -> Razorpay -> ${suite.name}`,
+        stageMeta: `SUITE: ${suite.code}`,
         bg: 'rgba(37,99,235,0.02)',
         borderColor: '#93c5fd',
         tagBg: '#dbeafe',
@@ -611,11 +679,11 @@ function buildInitialNodes(
         title: 'ENROLL STUDENT',
         category: 'ADMISSIONS MODULE',
         icon: UserPlus,
-        description: 'Rahul Sharma enrolled in CSE department under MERIT quota.',
+        description: `${student.name} enrolled in ${student.department.split(' ')[0]} under ${student.quota} quota.`,
         properties: [
-          { label: 'Student', value: 'Rahul Sharma (CS-042)' },
-          { label: 'Department', value: 'Computer Science (CSE)' },
-          { label: 'Quota', value: 'MERIT (Standard Rate)' },
+          { label: 'Student', value: `${student.name} (${student.rollNumber})` },
+          { label: 'Department', value: student.department.slice(0, 18) },
+          { label: 'Quota', value: student.quota },
         ],
         hasInput: false,
         hasOutput: true,
@@ -637,9 +705,9 @@ function buildInitialNodes(
         title: 'FEE ASSESSMENT',
         category: 'CALCULATION ENGINE',
         icon: Calculator,
-        description: `Engine computes tuition Rs.45,000 + standard ${scenario.affectedHead}.`,
+        description: `Engine computes tuition Rs.${student.tuitionFee.toLocaleString()} + standard ${scenario.affectedHead}.`,
         properties: [
-          { label: 'TUITION_FEE', value: 'Rs. 45,000' },
+          { label: 'TUITION_FEE', value: `Rs. ${student.tuitionFee.toLocaleString()}` },
           { label: scenario.affectedHead.slice(0, 14), value: `Rs. ${Math.abs(scenario.standardAmount).toLocaleString()}` },
           { label: 'Net Payable', value: `Rs. ${baseNet.toLocaleString()}` },
         ],
@@ -683,10 +751,10 @@ function buildInitialNodes(
         title: 'REGRESSION AUDIT',
         category: 'CI/CD SUITE',
         icon: ShieldCheck,
-        description: 'Automated test suite executes 10 regression checks on clean ERP.',
+        description: `Automated ${suite.name} executes ${suite.testCount} checks on clean ERP.`,
         properties: [
-          { label: 'Suite Code', value: 'FULL_REGRESSION' },
-          { label: 'Assertions', value: `10/10 Passed (${scenario.failedTestCode})` },
+          { label: 'Suite Code', value: suite.code },
+          { label: 'Assertions', value: `${suite.testCount}/${suite.testCount} Passed` },
           { label: 'Discrepancy', value: 'Rs. 0 (Clean Passed)' },
         ],
         hasInput: true,
@@ -804,9 +872,9 @@ function buildInitialNodes(
         title: 'ANOMALY CAUGHT!',
         category: 'AUDIT ALERT',
         icon: ShieldAlert,
-        description: `Automated test halts pipeline! Caught Rs.${scenario.totalDamage.toLocaleString()} overcharge before production.`,
+        description: `Automated ${suite.name} halts pipeline! Caught Rs.${scenario.totalDamage.toLocaleString()} overcharge before release.`,
         properties: [
-          { label: 'Failed Tests', value: `${scenario.failedTestCode} (Fails)` },
+          { label: 'Failed Tests', value: `${scenario.failedTestCode} (${suite.code})` },
           { label: 'Total Blocked', value: `Rs. ${scenario.totalDamage.toLocaleString()}` },
           { label: 'CI Gate Status', value: 'DEPLOYMENT BLOCKED' },
         ],
@@ -830,7 +898,7 @@ function buildInitialNodes(
         height: 480,
         versionTag: 'STAGE 3 // v1.2',
         title: 'DEVELOPER HOTFIX & PRODUCTION RESTORATION',
-        subtitle: 'Hotfix Applied -> Ledger Rebalanced -> 10/10 Tests Green -> Diff Audit Release Sign-Off',
+        subtitle: `Hotfix Applied -> Ledger Rebalanced -> ${suite.testCount}/${suite.testCount} Tests Green -> Diff Audit Release Sign-Off`,
         stageMeta: 'STATUS: PATCH VERIFIED',
         bg: 'rgba(22,163,74,0.02)',
         borderColor: '#86efac',
@@ -902,10 +970,10 @@ function buildInitialNodes(
         title: 'VERIFICATION SUITE',
         category: 'TEST RUNNER',
         icon: Activity,
-        description: 'Full suite executed to verify all 10 tests pass without discrepancies.',
+        description: `Full ${suite.name} executed to verify all ${suite.testCount} checks pass without discrepancies.`,
         properties: [
-          { label: 'Suite Code', value: 'FULL_REGRESSION' },
-          { label: 'Target', value: '10/10 All Green' },
+          { label: 'Suite Code', value: suite.code },
+          { label: 'Target', value: `${suite.testCount}/${suite.testCount} All Green` },
           { label: 'Assertions', value: `${scenario.failedTestCode} Restored` },
         ],
         hasInput: true,
@@ -969,7 +1037,17 @@ function PipelineFlowInner() {
   const [activeTool, setActiveTool] = useState<'select' | 'hand'>('hand');
   const [canvasBg, setCanvasBg] = useState<CanvasTheme>('white');
   const [speedMode, setSpeedMode] = useState<SpeedMode>('real');
+
+  // Option 1 & 2 state: Selected Scenario and Selected Test Suite
   const [selectedScenarioKey, setSelectedScenarioKey] = useState<string>('DOUBLE_LIBRARY_FEE');
+  const [selectedSuiteKey, setSelectedSuiteKey] = useState<string>('FULL_REGRESSION');
+
+  // Option 3 state: Custom Student Test Case Playground
+  const [studentModel, setStudentModel] = useState<StudentModel>(DEFAULT_STUDENT);
+  const [playgroundOpen, setPlaygroundOpen] = useState(false);
+  const [playgroundForm, setPlaygroundForm] = useState<StudentModel>(DEFAULT_STUDENT);
+  const [customTestResult, setCustomTestResult] = useState<any | null>(null);
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [activeStage, setActiveStage] = useState<string | null>(null);
@@ -981,11 +1059,12 @@ function PipelineFlowInner() {
   // Modals for the 4 core evaluator features:
   const [helpOpen, setHelpOpen] = useState(false);
   const [inspectModal, setInspectModal] = useState<any | null>(null);
-  const [diffModalOpen, setDiffModalOpen] = useState(false); // Feature #2: 3-Way Diff Viewer
-  const [reportModalOpen, setReportModalOpen] = useState(false); // Feature #3: QA Sign-off Report
-  const [cicdModalOpen, setCicdModalOpen] = useState(false); // Feature #4: CI/CD Quality Gate
+  const [diffModalOpen, setDiffModalOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [cicdModalOpen, setCicdModalOpen] = useState(false);
 
   const currentScenario = DEFECT_SCENARIOS[selectedScenarioKey] || DEFECT_SCENARIOS.DOUBLE_LIBRARY_FEE!;
+  const currentSuite = TEST_SUITES[selectedSuiteKey] || TEST_SUITES.FULL_REGRESSION!;
   const runIdsRef = useRef<{ baseline?: string; defective?: string; resolved?: string }>({});
 
   const getDelay = useCallback(
@@ -1045,17 +1124,19 @@ function PipelineFlowInner() {
     if (isRunning) return;
     setIsRunning(true);
     setActiveStage('v1.0');
-    showToast('Executing Stage 1: v1.0 Clean Enrollment, Assessment & Payment Flow...', 'info');
+    showToast(`Executing Stage 1: v1.0 Clean Flow with ${currentSuite.name}...`, 'info');
 
     jumpToStage('v1.0');
 
-    updateNode('v1-step1', { status: 'running', progress: 15, currentActivity: 'Querying Student Database...' });
+    updateNode('v1-step1', { status: 'running', progress: 15, currentActivity: `Enrolling ${studentModel.name}...` });
     updateNode('v1-step2', { status: 'idle', result: null, progress: 0 });
     updateNode('v1-step3', { status: 'idle', result: null, progress: 0 });
     updateNode('v1-step4', { status: 'idle', result: null, progress: 0 });
     setWire('e-v1-1-2', '#cbd5e1', false);
     setWire('e-v1-2-3', '#cbd5e1', false);
     setWire('e-v1-3-4', '#cbd5e1', false);
+
+    const baseNet = studentModel.tuitionFee + studentModel.libraryFee - (studentModel.tuitionFee * studentModel.scholarshipPercent) / 100;
 
     try {
       await sleep(600);
@@ -1068,9 +1149,9 @@ function PipelineFlowInner() {
         result: 'ENROLLMENT VERIFIED',
         details: [
           'HTTP 200 OK • GET /api/students',
-          'Student: Rahul Sharma (Roll: CS-042)',
-          'Department: Computer Science & Engineering (CSE)',
-          'Quota: MERIT (Standard tuition rates apply)',
+          `Student: ${studentModel.name} (${studentModel.rollNumber})`,
+          `Department: ${studentModel.department}`,
+          `Quota: ${studentModel.quota}`,
         ],
       });
       setWire('e-v1-1-2', '#2563eb', true);
@@ -1092,12 +1173,12 @@ function PipelineFlowInner() {
       updateNode('v1-step2', {
         status: 'passed',
         progress: 100,
-        result: 'FEE ASSESSED: RS.47,000',
+        result: `FEE ASSESSED: RS.${baseNet.toLocaleString()}`,
         details: [
           'HTTP 200 OK • POST /api/fees/calculate',
-          'Base Tuition: Rs. 45,000 (CSE Merit rate)',
+          `Base Tuition: Rs. ${studentModel.tuitionFee.toLocaleString()}`,
           `${currentScenario.affectedHead}: Standard rate`,
-          'Net Total: Rs. 47,000 (Ledger balanced)',
+          `Net Total: Rs. ${baseNet.toLocaleString()} (Ledger balanced)`,
         ],
       });
       setWire('e-v1-2-3', '#2563eb', true);
@@ -1110,25 +1191,25 @@ function PipelineFlowInner() {
       updateNode('v1-step3', {
         status: 'passed',
         progress: 100,
-        result: 'PAID RS.47,000 (CLEAN)',
+        result: `PAID RS.${baseNet.toLocaleString()} (CLEAN)`,
         details: [
           'HTTP 200 OK • POST /api/payments',
           'Receipt #RCP-2024-001 generated',
-          'Amount Paid: Rs. 47,000 via Net Banking',
+          `Amount Paid: Rs. ${baseNet.toLocaleString()} via Net Banking`,
           'Outstanding Balance: Rs. 0',
         ],
       });
       setWire('e-v1-3-4', '#2563eb', true);
 
-      updateNode('v1-step4', { status: 'running', progress: 20, currentActivity: 'POST /api/testing/runs...' });
-      showToast('[v1.0] Running 10-test automated regression suite...', 'info');
+      updateNode('v1-step4', { status: 'running', progress: 20, currentActivity: `POST /api/testing/runs (${currentSuite.code})...` });
+      showToast(`[v1.0] Running ${currentSuite.testCount}-test ${currentSuite.name}...`, 'info');
 
       let baseData: any = null;
       try {
         const res = await fetch(`${API}/api/testing/runs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ suiteCode: 'FULL_REGRESSION', triggerSource: 'HORIZONTAL_FLOW' }),
+          body: JSON.stringify({ suiteCode: currentSuite.code, triggerSource: 'HORIZONTAL_FLOW' }),
         });
         baseData = await res.json();
       } catch {
@@ -1136,18 +1217,18 @@ function PipelineFlowInner() {
       }
 
       await sleep(600);
-      updateNode('v1-step4', { progress: 60, currentActivity: 'Executing 10 Test Assertions...' });
+      updateNode('v1-step4', { progress: 60, currentActivity: `Executing ${currentSuite.testCount} Test Assertions...` });
       await sleep(800);
 
       const runInfo = baseData?.data || {
         id: 'cmug_base_' + Date.now().toString().slice(-6),
-        total: 10,
-        passed: 10,
+        total: currentSuite.testCount,
+        passed: currentSuite.testCount,
         failed: 0,
         durationMs: 342,
       };
-      const totalTests = runInfo.total ?? 10;
-      const passedTests = runInfo.passed ?? 10;
+      const totalTests = runInfo.total ?? currentSuite.testCount;
+      const passedTests = runInfo.passed ?? currentSuite.testCount;
       runIdsRef.current.baseline = runInfo.id;
 
       updateNode('v1-step4', {
@@ -1157,20 +1238,20 @@ function PipelineFlowInner() {
         duration: `${runInfo.durationMs}ms`,
         details: [
           `HTTP 201 Created • Run ID: ${runInfo.id.slice(0, 14)}...`,
-          `Assertions: ${currentScenario.failedTestCode} [PASS], TC-MERIT-TUITION [PASS]`,
+          `Suite: ${currentSuite.code} (${totalTests} Tests Green)`,
           'Audit sign-off: Baseline clean, Rs. 0 discrepancy',
         ],
       });
 
       setWire('e-bridge-v1-v1_1', '#2563eb', true);
-      showToast('Stage 1 (v1.0 Baseline) completed: 10/10 tests PASSED! Ready for Stage 2.', 'success');
+      showToast(`Stage 1 (v1.0 Baseline) completed: ${passedTests}/${totalTests} tests PASSED! Ready for Stage 2.`, 'success');
     } catch (err: any) {
       showToast(`v1.0 Error: ${err.message}`, 'danger');
     } finally {
       setIsRunning(false);
       setActiveStage(null);
     }
-  }, [isRunning, updateNode, setWire, showToast, jumpToStage, currentScenario]);
+  }, [isRunning, updateNode, setWire, showToast, jumpToStage, currentScenario, currentSuite, studentModel]);
 
   // ─── STAGE 2: RUN v1.1 DEFECT RUN & ANOMALY CAUGHT ────────────
   const runVersion2 = useCallback(async () => {
@@ -1188,6 +1269,9 @@ function PipelineFlowInner() {
     setWire('e-v1_1-1-2', '#cbd5e1', false);
     setWire('e-v1_1-2-3', '#cbd5e1', false);
     setWire('e-v1_1-3-4', '#cbd5e1', false);
+
+    const baseNet = studentModel.tuitionFee + studentModel.libraryFee - (studentModel.tuitionFee * studentModel.scholarshipPercent) / 100;
+    const corruptedAmount = baseNet + currentScenario.overchargePerStudent;
 
     try {
       await sleep(600);
@@ -1218,13 +1302,12 @@ function PipelineFlowInner() {
       updateNode('v1_1-step2', { progress: 80, currentActivity: 'Discrepancy Injected in Net Amount...' });
       await sleep(700);
 
-      const corruptedAmount = 47000 + currentScenario.overchargePerStudent;
       updateNode('v1_1-step2', {
         status: 'failed',
         progress: 100,
         result: `CORRUPTED: RS.${corruptedAmount.toLocaleString()}`,
         details: [
-          'Standard: Rs. 47,000',
+          `Standard: Rs. ${baseNet.toLocaleString()}`,
           `Corrupted: Rs. ${corruptedAmount.toLocaleString()}`,
           `Overcharge Delta: +Rs. ${currentScenario.overchargePerStudent.toLocaleString()}`,
         ],
@@ -1248,15 +1331,15 @@ function PipelineFlowInner() {
       });
       setWire('e-v1_1-3-4', '#dc2626', true);
 
-      updateNode('v1_1-step4', { status: 'running', progress: 25, currentActivity: 'POST /api/testing/runs...' });
-      showToast('[v1.1] Running regression suite under defect...', 'danger');
+      updateNode('v1_1-step4', { status: 'running', progress: 25, currentActivity: `POST /api/testing/runs (${currentSuite.code})...` });
+      showToast(`[v1.1] Running ${currentSuite.name} under defect...`, 'danger');
 
       let defectData: any = null;
       try {
         const res = await fetch(`${API}/api/testing/runs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ suiteCode: 'FULL_REGRESSION', triggerSource: 'HORIZONTAL_FLOW' }),
+          body: JSON.stringify({ suiteCode: currentSuite.code, triggerSource: 'HORIZONTAL_FLOW' }),
         });
         defectData = await res.json();
       } catch {
@@ -1267,23 +1350,24 @@ function PipelineFlowInner() {
       updateNode('v1_1-step4', { progress: 65, currentActivity: 'Intercepting Assertion Failures...' });
       await sleep(800);
 
+      const failedTestsCount = currentSuite.id === 'SMOKE_SUITE' ? 1 : currentSuite.id === 'FINANCIAL_LEDGER_SUITE' ? 2 : 3;
       const runInfo = defectData?.data || {
         id: 'cmug_defect_' + Date.now().toString().slice(-6),
-        total: 10,
-        passed: 7,
-        failed: 3,
+        total: currentSuite.testCount,
+        passed: currentSuite.testCount - failedTestsCount,
+        failed: failedTestsCount,
         durationMs: 389,
       };
-      const failedTests = runInfo.failed ?? 3;
       runIdsRef.current.defective = runInfo.id;
 
       updateNode('v1_1-step4', {
         status: 'failed',
         progress: 100,
-        result: `${failedTests} FAILURES // RS.${currentScenario.totalDamage.toLocaleString()} CAUGHT`,
+        result: `${failedTestsCount} FAILURES // RS.${currentScenario.totalDamage.toLocaleString()} CAUGHT`,
         duration: `${runInfo.durationMs}ms`,
         details: [
           `HTTP 201 Created • Run ID: ${runInfo.id.slice(0, 14)}...`,
+          `Suite: ${currentSuite.code} (${failedTestsCount} Fails)`,
           `FAIL: ${currentScenario.failedTestCode} (Arithmetic Discrepancy)`,
           `Damage Intercepted: Rs. ${currentScenario.totalDamage.toLocaleString()}`,
           'CI/CD Gate: DEPLOYMENT BLOCKED',
@@ -1298,15 +1382,15 @@ function PipelineFlowInner() {
         title: 'CRITICAL ANOMALY CAUGHT OFF-GUARD!',
         stepNumber: 'STAGE 2 AUDIT',
         version: 'v1.1',
-        student: 'Rahul Sharma (CS-042)',
-        department: 'Computer Science & Engineering',
-        expected: 'Rs. 47,000',
+        student: `${studentModel.name} (${studentModel.rollNumber})`,
+        department: studentModel.department,
+        expected: `Rs. ${baseNet.toLocaleString()}`,
         corrupted: `Rs. ${corruptedAmount.toLocaleString()}`,
         discrepancy: `+Rs. ${currentScenario.overchargePerStudent.toLocaleString()} per student`,
         cohortCount: currentScenario.cohortCount,
         totalDamage: `Rs. ${currentScenario.totalDamage.toLocaleString()}`,
         rootCause: `${currentScenario.defectKey} in calculation logic`,
-        failedTest: currentScenario.failedTestCode,
+        failedTest: `${currentScenario.failedTestCode} in ${currentSuite.code}`,
         status: 'failed',
         isAnomalyCaught: true,
       });
@@ -1317,7 +1401,7 @@ function PipelineFlowInner() {
       setIsRunning(false);
       setActiveStage(null);
     }
-  }, [isRunning, updateNode, setWire, showToast, jumpToStage, currentScenario]);
+  }, [isRunning, updateNode, setWire, showToast, jumpToStage, currentScenario, currentSuite, studentModel]);
 
   // ─── STAGE 3: RUN v1.2 HOTFIX & RESTORATION ───────────────────
   const runVersion3 = useCallback(async () => {
@@ -1335,6 +1419,8 @@ function PipelineFlowInner() {
     setWire('e-v1_2-1-2', '#cbd5e1', false);
     setWire('e-v1_2-2-3', '#cbd5e1', false);
     setWire('e-v1_2-3-4', '#cbd5e1', false);
+
+    const baseNet = studentModel.tuitionFee + studentModel.libraryFee - (studentModel.tuitionFee * studentModel.scholarshipPercent) / 100;
 
     try {
       await sleep(600);
@@ -1368,24 +1454,24 @@ function PipelineFlowInner() {
       updateNode('v1_2-step2', {
         status: 'passed',
         progress: 100,
-        result: 'RESTORED: RS.47,000',
+        result: `RESTORED: RS.${baseNet.toLocaleString()}`,
         details: [
           `${currentScenario.affectedHead}: Restored standard rate`,
           'Overcharge eliminated: Rs. 0 discrepancy',
-          'Student net payable: Rs. 47,000 (Exact)',
+          `Student net payable: Rs. ${baseNet.toLocaleString()} (Exact)`,
         ],
       });
       setWire('e-v1_2-2-3', '#16a34a', true);
 
-      updateNode('v1_2-step3', { status: 'running', progress: 20, currentActivity: 'POST /api/testing/runs...' });
-      showToast('[v1.2] Executing verification suite...', 'info');
+      updateNode('v1_2-step3', { status: 'running', progress: 20, currentActivity: `POST /api/testing/runs (${currentSuite.code})...` });
+      showToast(`[v1.2] Executing verification suite (${currentSuite.name})...`, 'info');
 
       let resolveData: any = null;
       try {
         const res = await fetch(`${API}/api/testing/runs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ suiteCode: 'FULL_REGRESSION', triggerSource: 'HORIZONTAL_FLOW' }),
+          body: JSON.stringify({ suiteCode: currentSuite.code, triggerSource: 'HORIZONTAL_FLOW' }),
         });
         resolveData = await res.json();
       } catch {
@@ -1393,18 +1479,18 @@ function PipelineFlowInner() {
       }
 
       await sleep(700);
-      updateNode('v1_2-step3', { progress: 65, currentActivity: 'Re-verifying All 10 Test Cases...' });
+      updateNode('v1_2-step3', { progress: 65, currentActivity: `Re-verifying All ${currentSuite.testCount} Test Cases...` });
       await sleep(800);
 
       const runInfo = resolveData?.data || {
         id: 'cmug_fix_' + Date.now().toString().slice(-6),
-        total: 10,
-        passed: 10,
+        total: currentSuite.testCount,
+        passed: currentSuite.testCount,
         failed: 0,
         durationMs: 312,
       };
-      const totalTests = runInfo.total ?? 10;
-      const passedTests = runInfo.passed ?? 10;
+      const totalTests = runInfo.total ?? currentSuite.testCount;
+      const passedTests = runInfo.passed ?? currentSuite.testCount;
       runIdsRef.current.resolved = runInfo.id;
 
       updateNode('v1_2-step3', {
@@ -1414,8 +1500,8 @@ function PipelineFlowInner() {
         duration: `${runInfo.durationMs}ms`,
         details: [
           `HTTP 201 Created • Run ID: ${runInfo.id.slice(0, 14)}...`,
-          `${currentScenario.failedTestCode} [PASS], TC-MERIT [PASS]`,
-          'All 10 test assertions passed with zero defects',
+          `Suite: ${currentSuite.code} (${totalTests}/${totalTests} Green)`,
+          'All test assertions passed with zero defects',
           'System verified 100% healthy',
         ],
       });
@@ -1461,8 +1547,8 @@ function PipelineFlowInner() {
         title: 'PRODUCTION SIGN-OFF COMPLETED!',
         stepNumber: 'STAGE 3 FINAL AUDIT',
         version: 'v1.2',
-        student: 'All Enrolled Students (Verified)',
-        expected: 'Rs. 47,000 (Corrected)',
+        student: `${studentModel.name} (${studentModel.rollNumber})`,
+        expected: `Rs. ${baseNet.toLocaleString()} (Corrected)`,
         corrupted: '0 Discrepancies Remaining',
         discrepancy: 'Rs. 0 (Clean)',
         cohortCount: currentScenario.cohortCount,
@@ -1478,7 +1564,7 @@ function PipelineFlowInner() {
       setIsRunning(false);
       setActiveStage(null);
     }
-  }, [isRunning, updateNode, setWire, showToast, jumpToStage, currentScenario]);
+  }, [isRunning, updateNode, setWire, showToast, jumpToStage, currentScenario, currentSuite, studentModel]);
 
   // ─── MASTER RUN ───────────────────────────────────────────────
   const runFullPipeline = useCallback(async () => {
@@ -1504,16 +1590,18 @@ function PipelineFlowInner() {
           onRunV3: runVersion3,
           onInspectNode: handleInspectNode,
         },
-        currentScenario
+        currentScenario,
+        currentSuite,
+        studentModel
       )
     );
     setEdges(buildInitialEdges());
     runIdsRef.current = {};
     showToast('Canvas reset to initial state.', 'info');
     jumpToStage('v1.0');
-  }, [runVersion1, runVersion2, runVersion3, handleInspectNode, jumpToStage, showToast, currentScenario]);
+  }, [runVersion1, runVersion2, runVersion3, handleInspectNode, jumpToStage, showToast, currentScenario, currentSuite, studentModel]);
 
-  // Re-generate nodes when user changes Defect Scenario
+  // Scenario Switcher (Feature #1)
   const handleScenarioChange = (scenarioKey: string) => {
     setSelectedScenarioKey(scenarioKey);
     const newScen = DEFECT_SCENARIOS[scenarioKey] || DEFECT_SCENARIOS.DOUBLE_LIBRARY_FEE!;
@@ -1525,11 +1613,72 @@ function PipelineFlowInner() {
           onRunV3: runVersion3,
           onInspectNode: handleInspectNode,
         },
-        newScen
+        newScen,
+        currentSuite,
+        studentModel
       )
     );
     setEdges(buildInitialEdges());
     showToast(`Switched Defect Scenario to: ${newScen.name}`, 'info');
+  };
+
+  // Test Suite Switcher (Option 2)
+  const handleSuiteChange = (suiteKey: string) => {
+    setSelectedSuiteKey(suiteKey);
+    const newSuite = TEST_SUITES[suiteKey] || TEST_SUITES.FULL_REGRESSION!;
+    setNodes(
+      buildInitialNodes(
+        {
+          onRunV1: runVersion1,
+          onRunV2: runVersion2,
+          onRunV3: runVersion3,
+          onInspectNode: handleInspectNode,
+        },
+        currentScenario,
+        newSuite,
+        studentModel
+      )
+    );
+    setEdges(buildInitialEdges());
+    showToast(`Active Test Suite switched to: ${newSuite.name} (${newSuite.testCount} Tests)`, 'info');
+  };
+
+  // Custom Student Live Test (Option 3)
+  const handleRunCustomTest = () => {
+    const waiver = (playgroundForm.tuitionFee * playgroundForm.scholarshipPercent) / 100;
+    const cleanTotal = playgroundForm.tuitionFee + playgroundForm.libraryFee - waiver;
+    const bugOvercharge = currentScenario.overchargePerStudent;
+    const corruptedTotal = cleanTotal + bugOvercharge;
+
+    setCustomTestResult({
+      cleanTotal,
+      corruptedTotal,
+      overcharge: bugOvercharge,
+      waiver,
+      scenario: currentScenario.name,
+      testCode: currentScenario.failedTestCode,
+      discrepancyCaught: true,
+    });
+  };
+
+  const handleApplyCustomStudentToCanvas = () => {
+    setStudentModel(playgroundForm);
+    setNodes(
+      buildInitialNodes(
+        {
+          onRunV1: runVersion1,
+          onRunV2: runVersion2,
+          onRunV3: runVersion3,
+          onInspectNode: handleInspectNode,
+        },
+        currentScenario,
+        currentSuite,
+        playgroundForm
+      )
+    );
+    setEdges(buildInitialEdges());
+    setPlaygroundOpen(false);
+    showToast(`Applied custom student "${playgroundForm.name}" to Canvas Pipeline!`, 'success');
   };
 
   const initialNodes = useMemo(
@@ -1541,7 +1690,9 @@ function PipelineFlowInner() {
           onRunV3: runVersion3,
           onInspectNode: handleInspectNode,
         },
-        currentScenario
+        currentScenario,
+        currentSuite,
+        studentModel
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
@@ -1584,7 +1735,7 @@ function PipelineFlowInner() {
           zIndex: 40,
           display: 'flex',
           alignItems: 'center',
-          gap: 6,
+          gap: 5,
           background: '#ffffff',
           padding: '4px 8px',
           borderRadius: 10,
@@ -1641,17 +1792,14 @@ function PipelineFlowInner() {
           <MousePointer size={15} />
         </button>
 
-        {/* Excalidraw Shapes */}
-        <button title="Rectangle" style={{ width: 32, height: 32, borderRadius: 7, border: 'none', background: 'transparent', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Square size={15} /></button>
-        <button title="Diamond" style={{ width: 32, height: 32, borderRadius: 7, border: 'none', background: 'transparent', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Diamond size={15} /></button>
-        <button title="Arrow" style={{ width: 32, height: 32, borderRadius: 7, border: 'none', background: 'transparent', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><ArrowRight size={15} /></button>
-        <button title="Draw" style={{ width: 32, height: 32, borderRadius: 7, border: 'none', background: 'transparent', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><PenTool size={15} /></button>
+        <button title="Rectangle" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: 'transparent', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Square size={14} /></button>
+        <button title="Arrow" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: 'transparent', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><ArrowRight size={14} /></button>
 
-        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 3px' }} />
+        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 2px' }} />
 
         {/* FEATURE #1: DEFECT SCENARIO SELECTOR */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f8fafc', padding: '3px 6px', borderRadius: 7, border: '1px solid #e2e8f0' }}>
-          <Sliders size={13} color="#6965db" />
+          <Bug size={13} color="#dc2626" />
           <select
             value={selectedScenarioKey}
             onChange={(e) => handleScenarioChange(e.target.value)}
@@ -1674,6 +1822,53 @@ function PipelineFlowInner() {
             ))}
           </select>
         </div>
+
+        {/* OPTION 2: TEST SUITE SELECTOR */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f8fafc', padding: '3px 6px', borderRadius: 7, border: '1px solid #e2e8f0' }}>
+          <Layers size={13} color="#2563eb" />
+          <select
+            value={selectedSuiteKey}
+            onChange={(e) => handleSuiteChange(e.target.value)}
+            disabled={isRunning}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: 10.5,
+              fontWeight: 800,
+              color: '#1e293b',
+              cursor: isRunning ? 'not-allowed' : 'pointer',
+              outline: 'none',
+              fontFamily: 'inherit',
+            }}
+          >
+            {Object.values(TEST_SUITES).map((suite) => (
+              <option key={suite.id} value={suite.id}>
+                {suite.shortLabel}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* OPTION 3: CUSTOM TEST PLAYGROUND BUTTON */}
+        <button
+          onClick={() => { setPlaygroundForm(studentModel); setPlaygroundOpen(true); }}
+          title="Open Custom Student Test Case Playground"
+          style={{
+            padding: '5px 9px',
+            borderRadius: 6,
+            border: '1px solid #c7d2fe',
+            background: '#eef2ff',
+            color: '#4338ca',
+            fontSize: 10.5,
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            cursor: 'pointer',
+          }}
+        >
+          <TestTube size={12} color="#4338ca" /> Test Playground
+        </button>
 
         {/* Speed Selector */}
         <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', padding: 2, borderRadius: 7, border: '1px solid #e2e8f0' }}>
@@ -1713,89 +1908,53 @@ function PipelineFlowInner() {
           </button>
         </div>
 
-        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 3px' }} />
+        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 2px' }} />
 
-        {/* FEATURE #2: 3-WAY LEDGER DIFF VIEWER BUTTON */}
+        {/* FEATURE #2: 3-WAY DIFF BUTTON */}
         <button
           onClick={() => setDiffModalOpen(true)}
           title="Open Visual 3-Way Ledger Diff Viewer"
-          style={{
-            padding: '5px 9px',
-            borderRadius: 6,
-            border: '1px solid #cbd5e1',
-            background: '#ffffff',
-            color: '#334155',
-            fontSize: 10.5,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            cursor: 'pointer',
-          }}
+          style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#ffffff', color: '#334155', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
         >
           <BarChart3 size={12} color="#6965db" /> Diff Viewer
         </button>
 
-        {/* FEATURE #3: QA AUDIT REPORT CERTIFICATE */}
+        {/* FEATURE #3: QA CERTIFICATE BUTTON */}
         <button
           onClick={() => setReportModalOpen(true)}
           title="Generate Official QA Sign-Off Certificate"
-          style={{
-            padding: '5px 9px',
-            borderRadius: 6,
-            border: '1px solid #bbf7d0',
-            background: '#f0fdf4',
-            color: '#15803d',
-            fontSize: 10.5,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            cursor: 'pointer',
-          }}
+          style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
         >
           <Award size={12} color="#15803d" /> QA Certificate
         </button>
 
-        {/* FEATURE #4: CI/CD QUALITY GATE */}
+        {/* FEATURE #4: CI/CD GATE BUTTON */}
         <button
           onClick={() => setCicdModalOpen(true)}
           title="View CI/CD Pipeline Quality Gate"
-          style={{
-            padding: '5px 9px',
-            borderRadius: 6,
-            border: '1px solid #bfdbfe',
-            background: '#eff6ff',
-            color: '#1d4ed8',
-            fontSize: 10.5,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            cursor: 'pointer',
-          }}
+          style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
         >
           <GitBranch size={12} color="#1d4ed8" /> CI/CD Gate
         </button>
 
-        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 3px' }} />
+        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 2px' }} />
 
         {/* Master Run Button */}
         <button
           onClick={runFullPipeline}
           disabled={isRunning}
           style={{
-            padding: '7px 15px',
+            padding: '7px 14px',
             borderRadius: 8,
             border: 'none',
             background: isRunning ? '#818cf8' : '#6965db',
             color: '#ffffff',
             fontWeight: 700,
-            fontSize: 11.5,
+            fontSize: 11,
             letterSpacing: 0.3,
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 5,
             cursor: isRunning ? 'not-allowed' : 'pointer',
             boxShadow: '0 2px 8px rgba(105, 101, 219, 0.35)',
             transition: 'all 0.15s ease',
@@ -1813,7 +1972,7 @@ function PipelineFlowInner() {
           onClick={resetAll}
           disabled={isRunning}
           title="Reset Canvas"
-          style={{ width: 32, height: 32, borderRadius: 7, border: 'none', background: '#f8fafc', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isRunning ? 'not-allowed' : 'pointer' }}
+          style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: '#f8fafc', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isRunning ? 'not-allowed' : 'pointer' }}
         >
           <RotateCcw size={14} />
         </button>
@@ -1852,7 +2011,7 @@ function PipelineFlowInner() {
               position: 'absolute',
               top: 48,
               left: 0,
-              width: 290,
+              width: 300,
               background: '#ffffff',
               borderRadius: 12,
               border: '1px solid #e2e8f0',
@@ -1875,6 +2034,14 @@ function PipelineFlowInner() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <button
+                onClick={() => { setMenuOpen(false); setPlaygroundOpen(true); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 6, border: 'none', background: 'transparent', color: '#334155', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+              >
+                <TestTube size={14} color="#4338ca" />
+                <span>Custom Student Playground</span>
+              </button>
+
               <button
                 onClick={() => { setMenuOpen(false); setDiffModalOpen(true); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 6, border: 'none', background: 'transparent', color: '#334155', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
@@ -1968,14 +2135,17 @@ function PipelineFlowInner() {
             REGRESSION LAB
           </span>
           <span style={{ fontSize: 10, background: '#ececfc', color: '#6965db', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
-            {currentScenario.name}
+            {studentModel.name} ({studentModel.rollNumber})
           </span>
-          <span style={{ fontSize: 9.5, background: '#fef2f2', color: '#b91c1c', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+          <span style={{ fontSize: 9.5, background: '#eff6ff', color: '#1d4ed8', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+            Suite: {currentSuite.code} ({currentSuite.testCount} Tests)
+          </span>
+          <span style={{ fontSize: 9.5, background: '#fef2f2', color: '#b91c1c', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }} suppressHydrationWarning>
             Risk: Rs. {currentScenario.totalDamage.toLocaleString()}
           </span>
         </div>
         <span style={{ fontSize: 9.5, color: '#94a3b8', fontWeight: 500 }}>
-          Drag canvas left & right. Click &apos;Diff Viewer&apos; or &apos;QA Certificate&apos; to view examiner reports.
+          Drag canvas left & right. Click &apos;Test Playground&apos; to test your own custom student or examiner parameters.
         </span>
       </div>
 
@@ -2067,6 +2237,208 @@ function PipelineFlowInner() {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
+          OPTION 3: CUSTOM STUDENT TEST PLAYGROUND MODAL
+      ───────────────────────────────────────────────────────────── */}
+      {playgroundOpen && (
+        <div
+          onClick={() => setPlaygroundOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.5)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              maxWidth: 620,
+              width: '100%',
+              padding: 24,
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '2px solid #818cf8',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4338ca' }}>
+                  <TestTube size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#0f172a' }}>
+                    Custom Student Test Case Playground
+                  </h3>
+                  <div style={{ fontSize: 11, color: '#64748b' }}>
+                    Test any custom student or examiner parameters live against the regression engine.
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setPlaygroundOpen(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: 6, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer', fontWeight: 700 }}>✕</button>
+            </div>
+
+            {/* Form Fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, fontSize: 11.5 }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, color: '#475569', marginBottom: 4 }}>Student Name</label>
+                <input
+                  type="text"
+                  value={playgroundForm.name}
+                  onChange={(e) => setPlaygroundForm({ ...playgroundForm, name: e.target.value })}
+                  style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, color: '#475569', marginBottom: 4 }}>Roll Number</label>
+                <input
+                  type="text"
+                  value={playgroundForm.rollNumber}
+                  onChange={(e) => setPlaygroundForm({ ...playgroundForm, rollNumber: e.target.value })}
+                  style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, color: '#475569', marginBottom: 4 }}>Department</label>
+                <select
+                  value={playgroundForm.department}
+                  onChange={(e) => setPlaygroundForm({ ...playgroundForm, department: e.target.value })}
+                  style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, outline: 'none' }}
+                >
+                  <option value="Computer Science & Engineering (CSE)">Computer Science (CSE)</option>
+                  <option value="Electronics & Communication (ECE)">Electronics (ECE)</option>
+                  <option value="Mechanical Engineering (MECH)">Mechanical (MECH)</option>
+                  <option value="Civil Engineering (CIVIL)">Civil (CIVIL)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, color: '#475569', marginBottom: 4 }}>Quota</label>
+                <select
+                  value={playgroundForm.quota}
+                  onChange={(e) => setPlaygroundForm({ ...playgroundForm, quota: e.target.value })}
+                  style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, outline: 'none' }}
+                >
+                  <option value="MERIT">MERIT (Standard Tuition)</option>
+                  <option value="MANAGEMENT">MANAGEMENT (Includes Surcharge)</option>
+                  <option value="SPORTS">SPORTS (Eligible for Waivers)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, color: '#475569', marginBottom: 4 }}>Base Tuition (Rs.)</label>
+                <input
+                  type="number"
+                  value={playgroundForm.tuitionFee}
+                  onChange={(e) => setPlaygroundForm({ ...playgroundForm, tuitionFee: Number(e.target.value) })}
+                  style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontWeight: 700, color: '#475569', marginBottom: 4 }}>Library Fee (Rs.)</label>
+                <input
+                  type="number"
+                  value={playgroundForm.libraryFee}
+                  onChange={(e) => setPlaygroundForm({ ...playgroundForm, libraryFee: Number(e.target.value) })}
+                  style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, outline: 'none' }}
+                />
+              </div>
+            </div>
+
+            {/* Test Action */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={handleRunCustomTest}
+                style={{
+                  flex: 1,
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#4338ca',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  cursor: 'pointer',
+                }}
+              >
+                <Play size={13} fill="#ffffff" /> Run Live Test on This Student
+              </button>
+            </div>
+
+            {/* Live Calculation Output */}
+            {customTestResult && (
+              <div style={{ padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: 11 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#0f172a', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Test Outcome vs {currentScenario.name}:</span>
+                  <span style={{ color: '#dc2626', fontWeight: 900 }}>🚨 ANOMALY INTERCEPTED</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+                  <div style={{ background: '#ffffff', padding: 8, borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                    <div style={{ color: '#64748b', fontSize: 9.5 }}>CLEAN BASELINE NET:</div>
+                    <div style={{ fontWeight: 800, color: '#1e40af', fontSize: 12 }}>Rs. {customTestResult.cleanTotal.toLocaleString()}</div>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: 8, borderRadius: 6, border: '1px solid #fee2e2' }}>
+                    <div style={{ color: '#64748b', fontSize: 9.5 }}>CORRUPTED UNDER BUG:</div>
+                    <div style={{ fontWeight: 800, color: '#dc2626', fontSize: 12 }}>Rs. {customTestResult.corruptedTotal.toLocaleString()}</div>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: 8, borderRadius: 6, border: '1px solid #fee2e2' }}>
+                    <div style={{ color: '#64748b', fontSize: 9.5 }}>OVERCHARGE DELTA:</div>
+                    <div style={{ fontWeight: 800, color: '#dc2626', fontSize: 12 }}>+Rs. {customTestResult.overcharge.toLocaleString()}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 10.5, color: '#475569' }}>
+                  Assertion: <code style={{ background: '#e2e8f0', padding: '1px 4px', borderRadius: 3 }}>assert({customTestResult.testCode}: expected {customTestResult.cleanTotal} == received {customTestResult.corruptedTotal})</code> &rarr; <strong>FAILED (Caught by Regression Suite)</strong>
+                </div>
+              </div>
+            )}
+
+            {/* Footer Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
+              <button
+                onClick={handleApplyCustomStudentToCanvas}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#16a34a',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: 11.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <Check size={13} /> Apply This Student to Canvas Pipeline
+              </button>
+              <button
+                onClick={() => setPlaygroundOpen(false)}
+                style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: 700, fontSize: 11.5, cursor: 'pointer' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
           FEATURE #2: 3-WAY LEDGER DIFF VIEWER MODAL
       ───────────────────────────────────────────────────────────── */}
       {diffModalOpen && (
@@ -2109,7 +2481,7 @@ function PipelineFlowInner() {
                     3-Way Visual Ledger Diff Inspector
                   </h3>
                   <div style={{ fontSize: 11, color: '#64748b' }}>
-                    Scenario: <strong>{currentScenario.name}</strong> • Automated Regression Delta Analysis
+                    Student: <strong>{studentModel.name}</strong> • Scenario: <strong>{currentScenario.name}</strong> • Suite: <strong>{currentSuite.code}</strong>
                   </div>
                 </div>
               </div>
@@ -2129,10 +2501,10 @@ function PipelineFlowInner() {
                 </thead>
                 <tbody>
                   <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '9px 14px', fontWeight: 600 }}>Base Tuition (CSE)</td>
-                    <td style={{ padding: '9px 14px', fontFamily: 'monospace' }}>Rs. 45,000</td>
-                    <td style={{ padding: '9px 14px', fontFamily: 'monospace' }}>Rs. 45,000</td>
-                    <td style={{ padding: '9px 14px', fontFamily: 'monospace' }}>Rs. 45,000</td>
+                    <td style={{ padding: '9px 14px', fontWeight: 600 }}>Base Tuition</td>
+                    <td style={{ padding: '9px 14px', fontFamily: 'monospace' }}>Rs. {studentModel.tuitionFee.toLocaleString()}</td>
+                    <td style={{ padding: '9px 14px', fontFamily: 'monospace' }}>Rs. {studentModel.tuitionFee.toLocaleString()}</td>
+                    <td style={{ padding: '9px 14px', fontFamily: 'monospace' }}>Rs. {studentModel.tuitionFee.toLocaleString()}</td>
                   </tr>
                   <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#fff5f5' }}>
                     <td style={{ padding: '9px 14px', fontWeight: 800, color: '#b91c1c' }}>{currentScenario.affectedHead}</td>
@@ -2148,15 +2520,15 @@ function PipelineFlowInner() {
                   </tr>
                   <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#f8fafc', fontWeight: 800 }}>
                     <td style={{ padding: '10px 14px' }}>Net Student Bill</td>
-                    <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: '#1e40af' }}>Rs. 47,000</td>
-                    <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: '#dc2626' }}>Rs. {(47000 + currentScenario.overchargePerStudent).toLocaleString()}</td>
-                    <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: '#166534' }}>Rs. 47,000</td>
+                    <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: '#1e40af' }}>Rs. {studentModel.tuitionFee.toLocaleString()}</td>
+                    <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: '#dc2626' }}>Rs. {(studentModel.tuitionFee + currentScenario.overchargePerStudent).toLocaleString()}</td>
+                    <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: '#166534' }}>Rs. {studentModel.tuitionFee.toLocaleString()}</td>
                   </tr>
                   <tr>
                     <td style={{ padding: '10px 14px', fontWeight: 700, color: '#64748b' }}>Regression Test Gate</td>
-                    <td style={{ padding: '10px 14px' }}><span style={{ color: '#16a34a', fontWeight: 700 }}>✔ 10/10 PASS</span></td>
-                    <td style={{ padding: '10px 14px' }}><span style={{ color: '#dc2626', fontWeight: 800 }}>✖ 3 FAILS ({currentScenario.failedTestCode})</span></td>
-                    <td style={{ padding: '10px 14px' }}><span style={{ color: '#16a34a', fontWeight: 700 }}>✔ 10/10 PASS</span></td>
+                    <td style={{ padding: '10px 14px' }}><span style={{ color: '#16a34a', fontWeight: 700 }}>✔ {currentSuite.testCount}/{currentSuite.testCount} PASS</span></td>
+                    <td style={{ padding: '10px 14px' }}><span style={{ color: '#dc2626', fontWeight: 800 }}>✖ FAILS ({currentScenario.failedTestCode})</span></td>
+                    <td style={{ padding: '10px 14px' }}><span style={{ color: '#16a34a', fontWeight: 700 }}>✔ {currentSuite.testCount}/{currentSuite.testCount} PASS</span></td>
                   </tr>
                 </tbody>
               </table>
@@ -2207,7 +2579,6 @@ function PipelineFlowInner() {
               position: 'relative',
             }}
           >
-            {/* Header Stamp */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #e2e8f0', paddingBottom: 16 }}>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#15803d', letterSpacing: 1.5, textTransform: 'uppercase' }}>
@@ -2221,21 +2592,19 @@ function PipelineFlowInner() {
                 </div>
               </div>
 
-              {/* Verified Stamp Badge */}
               <div style={{ border: '2px dashed #16a34a', padding: '6px 14px', borderRadius: 8, background: '#f0fdf4', color: '#15803d', fontWeight: 900, fontSize: 12, letterSpacing: 1, textAlign: 'center', transform: 'rotate(-3deg)' }}>
                 ✔ QA APPROVED<br /><span style={{ fontSize: 9, fontWeight: 600 }}>READY FOR DEPLOY</span>
               </div>
             </div>
 
-            {/* Certificate Details */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, fontSize: 11.5 }}>
               <div style={{ padding: 10, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                 <span style={{ color: '#64748b', fontSize: 10, fontWeight: 700 }}>RELEASE CANDIDATE:</span>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>v1.2.0-STABLE (Hotfix)</div>
               </div>
               <div style={{ padding: 10, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                <span style={{ color: '#64748b', fontSize: 10, fontWeight: 700 }}>REGRESSION SUITE:</span>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#15803d' }}>FULL_REGRESSION (10/10 Passed)</div>
+                <span style={{ color: '#64748b', fontSize: 10, fontWeight: 700 }}>ACTIVE TEST SUITE:</span>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#15803d' }}>{currentSuite.name} ({currentSuite.testCount}/{currentSuite.testCount} Passed)</div>
               </div>
               <div style={{ padding: 10, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                 <span style={{ color: '#64748b', fontSize: 10, fontWeight: 700 }}>DEFECT INTERCEPTED:</span>
@@ -2251,12 +2620,10 @@ function PipelineFlowInner() {
               <strong>Audit Conclusion:</strong> The automated regression testing pipeline successfully intercepted the defect prior to customer distribution. The hotfix was verified with zero remaining regressions. The system is certified safe for financial ledger processing.
             </div>
 
-            {/* Cryptographic Hash */}
             <div style={{ fontSize: 9.5, color: '#94a3b8', fontFamily: 'monospace', background: '#f8fafc', padding: 8, borderRadius: 6, border: '1px solid #e2e8f0' }}>
               SHA256: 8f4c2e17a930bfa7d451296c039e1fbd6a7732d84c1a5e98214f7b6c5e2d1940 • Timestamp: {new Date().toISOString()}
             </div>
 
-            {/* Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: '1px solid #e2e8f0', paddingTop: 14 }}>
               <button
                 onClick={() => window.print()}
@@ -2318,9 +2685,7 @@ function PipelineFlowInner() {
               <button onClick={() => setCicdModalOpen(false)} style={{ background: '#1e293b', border: 'none', borderRadius: 6, width: 26, height: 26, color: '#94a3b8', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* 3 Pipeline Builds */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* Build 1 */}
               <div style={{ padding: 12, borderRadius: 8, background: '#1e293b', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: 11, color: '#94a3b8' }}>BUILD #102 • commit 4f2a1b9 (main)</div>
@@ -2332,7 +2697,6 @@ function PipelineFlowInner() {
                 </div>
               </div>
 
-              {/* Build 2 */}
               <div style={{ padding: 12, borderRadius: 8, background: '#450a0a', border: '1px solid #7f1d1d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: 11, color: '#fca5a5' }}>BUILD #103 • commit 8c3e44d (feature/calc-update)</div>
@@ -2340,11 +2704,10 @@ function PipelineFlowInner() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ background: '#7f1d1d', color: '#fca5a5', fontSize: 10, padding: '3px 8px', borderRadius: 4, fontWeight: 800 }}>DEPLOY BLOCKED</span>
-                  <div style={{ fontSize: 10, color: '#f87171', marginTop: 2 }}>Exit Code 1 (3 Tests Failed)</div>
+                  <div style={{ fontSize: 10, color: '#f87171', marginTop: 2 }}>Exit Code 1 ({currentSuite.name} Failed)</div>
                 </div>
               </div>
 
-              {/* Build 3 */}
               <div style={{ padding: 12, borderRadius: 8, background: '#1e293b', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: 11, color: '#94a3b8' }}>BUILD #104 • commit 9a11ef0 (hotfix/restore-formula)</div>
@@ -2352,13 +2715,13 @@ function PipelineFlowInner() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ background: '#064e3b', color: '#4ade80', fontSize: 10, padding: '3px 8px', borderRadius: 4, fontWeight: 800 }}>PRODUCTION RELEASE</span>
-                  <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>10/10 All Green (Diff 0)</div>
+                  <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{currentSuite.testCount}/{currentSuite.testCount} All Green (Diff 0)</div>
                 </div>
               </div>
             </div>
 
             <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.5, background: '#020617', padding: 10, borderRadius: 6 }}>
-              [CI-GATE-RULE]: Automated deployment to production requires 100% pass on FULL_REGRESSION suite. Any financial discrepancy halts the pipeline immediately.
+              [CI-GATE-RULE]: Automated deployment to production requires 100% pass on {currentSuite.code}. Any financial discrepancy halts the pipeline immediately.
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -2447,7 +2810,7 @@ function PipelineFlowInner() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, background: '#ffffff', padding: 10, borderRadius: 8, border: '1px solid #fee2e2' }}>
                     <div>
                       <div style={{ fontSize: 9.5, color: '#64748b', fontWeight: 600 }}>IMPACTED STUDENT:</div>
-                      <div style={{ fontSize: 11.5, fontWeight: 800, color: '#0f172a' }}>{inspectModal.student || 'Rahul Sharma (CS-042)'}</div>
+                      <div style={{ fontSize: 11.5, fontWeight: 800, color: '#0f172a' }}>{inspectModal.student}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: 9.5, color: '#64748b', fontWeight: 600 }}>OVERCHARGE / HEAD:</div>
@@ -2469,7 +2832,7 @@ function PipelineFlowInner() {
                     <ShieldCheck size={16} /> SYSTEM RESTORED — ZERO DISCREPANCIES
                   </div>
                   <p style={{ margin: '0 0 8px 0', fontSize: 11.5, color: '#14532d', lineHeight: 1.5 }}>
-                    All 10 regression test cases have passed successfully. The defect has been completely eliminated.
+                    All regression test cases have passed successfully. The defect has been completely eliminated.
                   </p>
                   <div style={{ background: '#ffffff', padding: 10, borderRadius: 8, border: '1px solid #dcfce7' }}>
                     <div style={{ fontSize: 11, color: '#15803d', fontWeight: 700 }}>
@@ -2586,23 +2949,23 @@ function PipelineFlowInner() {
 
             <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ padding: 10, borderRadius: 8, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                <strong style={{ color: '#1d4ed8' }}>1. Multi-Defect Scenarios:</strong>
+                <strong style={{ color: '#1d4ed8' }}>1. Multi-Defect & Suite Selector:</strong>
                 <p style={{ margin: '4px 0 0 0', fontSize: 11 }}>
-                  Use the top dropdown to simulate Library Double Fee, Missing Scholarship, or Quota Surcharge bugs!
+                  Switch between Library Double Fee, Scholarship Drop, and Quota Surcharge, or switch suites (Smoke vs Full Regression vs Ledger Audit)!
                 </p>
               </div>
 
-              <div style={{ padding: 10, borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca' }}>
-                <strong style={{ color: '#b91c1c' }}>2. 3-Way Visual Diff Viewer:</strong>
+              <div style={{ padding: 10, borderRadius: 8, background: '#eef2ff', border: '1px solid #c7d2fe' }}>
+                <strong style={{ color: '#4338ca' }}>2. Custom Student Test Playground:</strong>
                 <p style={{ margin: '4px 0 0 0', fontSize: 11 }}>
-                  Compare Baseline v1.0 vs Buggy v1.1 vs Restored v1.2 with highlighted red/green delta columns!
+                  Type your own student name and custom fee numbers to test real-time fee calculations live!
                 </p>
               </div>
 
               <div style={{ padding: 10, borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                <strong style={{ color: '#15803d' }}>3. Official QA Sign-Off Certificate:</strong>
+                <strong style={{ color: '#15803d' }}>3. 3-Way Diff & QA Certificate:</strong>
                 <p style={{ margin: '4px 0 0 0', fontSize: 11 }}>
-                  Generate and print formal IEEE/ISO verification reports showing total student financial losses blocked.
+                  Inspect side-by-side ledger diffs or print IEEE/ISO verified QA sign-off certificates.
                 </p>
               </div>
             </div>
@@ -2654,6 +3017,24 @@ function PipelineFlowInner() {
 
 // ─── Export Default Page with Provider ───────────────────────────
 export default function PipelinePage() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ffffff', fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#6965db', fontWeight: 700, fontSize: 14 }}>
+          <div style={{ width: 18, height: 18, border: '2.5px solid #6965db', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span>Loading Whiteboard Canvas...</span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ReactFlowProvider>
       <PipelineFlowInner />
